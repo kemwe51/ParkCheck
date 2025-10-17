@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ParkCheck · Direkt nach Supabase</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+
+  <style>
+    :root{
+      --bg-1:#0b1220; --bg-2:#111827; --glass:#ffffff1a; --stroke:#ffffff2b;
+      --text:#e5e7eb; --muted:#94a3b8; --brand:#60a5fa; --brand-2:#7c3aed;
+      --success:#22c55e; --warning:#f59e0b; --error:#ef4444; --radius:20px;
+      --shadow: 0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+      --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+      color:var(--text); background: radial-gradient(1200px 600px at 10% -10%, #1e293b 0%, #0b1220 60%), linear-gradient(180deg, #0b1220 0%, #0b1220 100%);
+      min-height:100%; display:flex; align-items:center; justify-content:center; padding:16px;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
+
+    .shell{width:100%; max-width:640px; position:relative}
+    .glass-card{position:relative; background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); border:1px solid var(--stroke); border-radius:var(--radius); box-shadow:var(--shadow); backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%); overflow:hidden}
+    .sheen::after{content:""; position:absolute; inset:0; background: radial-gradient(1000px 300px at -10% -10%, rgba(255,255,255,.18), transparent 50%), radial-gradient(600px 200px at 120% -20%, rgba(124,58,237,.16), transparent 40%), radial-gradient(400px 200px at -20% 120%, rgba(96,165,250,.16), transparent 40%); pointer-events:none}
+
+    header{display:flex; align-items:center; justify-content:space-between; padding:calc(14px + var(--safe-top)) 16px 14px 16px; gap:12px; position:sticky; top:0; z-index:5; background:linear-gradient(180deg, rgba(11,18,32,.9), rgba(11,18,32,.6)); backdrop-filter: blur(8px); border-bottom:1px solid var(--stroke)}
+    .brand{display:flex; align-items:center; gap:10px}
+    .brand .logo{width:32px; height:32px; border-radius:10px; background:linear-gradient(135deg, var(--brand), var(--brand-2)); box-shadow:0 6px 16px rgba(124,58,237,.35)}
+    .brand h1{font-size:16px; font-weight:700; letter-spacing:.3px; margin:0}
+    .tag{font-size:12px; color:var(--muted)}
+
+    main{padding:12px; display:grid; gap:16px}
+
+    .hero{ text-align:center; padding:28px 16px; background: radial-gradient(220px 120px at 20% 0%, rgba(96,165,250,.16), transparent 60%), radial-gradient(200px 100px at 80% 0%, rgba(124,58,237,.18), transparent 60%); border-radius:16px; border:1px solid var(--stroke)}
+    .hero h2{margin:0 0 6px; font-size:22px}
+    .hero p{margin:0; color:var(--muted); font-size:14px}
+
+    .cta{display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:18px}
+    .btn{appearance:none; border:0; outline:none; cursor:pointer; padding:16px 18px; border-radius:14px; font-weight:700; font-size:16px; color:white; background:linear-gradient(135deg, var(--brand), var(--brand-2)); box-shadow: 0 8px 20px rgba(96,165,250,.35), inset 0 1px 0 rgba(255,255,255,.18); transition: transform .06s ease, box-shadow .2s ease}
+    .btn:active{transform: scale(.98)}
+    .btn-secondary{ background: linear-gradient(135deg, #475569, #1f2937); box-shadow: 0 8px 20px rgba(30,41,59,.35), inset 0 1px 0 rgba(255,255,255,.12) }
+
+    .panel{ background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03)); border:1px solid var(--stroke); border-radius:16px; padding:14px }
+
+    .preview{ width:100%; border-radius:12px; border:1px solid var(--stroke); overflow:hidden }
+    .preview img{ display:block; width:100%; height:auto }
+
+    .status{ display:grid; gap:10px }
+    .chip{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03)); font-size:14px }
+    .chip .dot{ width:10px; height:10px; border-radius:50% }
+    .muted{ color:var(--muted); font-size:13px }
+
+    .bottom-bar{ position:sticky; bottom:0; padding:10px 12px calc(10px + var(--safe-bottom)) 12px; display:flex; gap:10px; background:linear-gradient(180deg, rgba(11,18,32, .2), rgba(11,18,32,.6)); backdrop-filter: blur(8px) saturate(140%); border-top:1px solid var(--stroke); align-items:center; justify-content:space-between }
+
+    .hidden{ display:none !important }
+    .ok{ color:var(--success) } .warn{ color:var(--warning) } .err{ color:var(--error) }
+
+    input[type=file]{ display:none }
+    label.file{ display:inline-flex; align-items:center; gap:8px }
+
+    /* inputs */
+    .field{ display:grid; gap:8px }
+    .field label{ font-size:14px; color:var(--muted) }
+    .text{ width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--stroke); background:rgba(255,255,255,.06); color:var(--text); font-size:16px }
+/* === Start Bubble – Liquid Glass === */
+.start-center{
+  display:flex; align-items:center; justify-content:center;
+  padding:72px 0; background:none; border:none;
+}
+
+#btnStart.liquid-bubble{
+  appearance:none; border:0; background:transparent; cursor:pointer;
+  width:min(78vw, 360px); height:min(78vw, 360px);
+  border-radius:50%; position:relative; isolation:isolate;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; letter-spacing:.5px;
+  font-size:clamp(28px, 7vw, 44px); color:var(--text);
+  text-shadow:0 2px 10px rgba(0,0,0,.40);
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.18);
+  backdrop-filter:blur(18px) saturate(180%);
+  -webkit-backdrop-filter:blur(18px) saturate(180%);
+  transition: transform .08s ease, box-shadow .25s ease;
+}
+
+/* Glas / Farbe / Glanz */
+#btnStart.liquid-bubble::before{
+  content:""; position:absolute; inset:0; border-radius:50%;
+  background:
+    radial-gradient(120% 120% at 80% 20%, rgba(255,255,255,.45), rgba(255,255,255,.12) 35%, transparent 55%),
+    radial-gradient(90% 90% at 25% 85%, rgba(124,58,237,.30), transparent 60%),
+    radial-gradient(90% 90% at 75% 85%, rgba(96,165,250,.28), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.06));
+  border:1px solid var(--stroke);
+  box-shadow: inset 0 8px 24px rgba(255,255,255,.08);
+  z-index:-1;
+}
+
+#btnStart.liquid-bubble::after{
+  content:""; position:absolute; inset:-2px; border-radius:50%;
+  background: radial-gradient(100% 60% at 50% -10%, rgba(255,255,255,.25), transparent 50%);
+  mix-blend-mode:screen; pointer-events:none;
+}
+
+/* Interaktion */
+#btnStart.liquid-bubble:hover{
+  box-shadow:
+    0 26px 80px rgba(124,58,237,.30),
+    inset 0 1px 0 rgba(255,255,255,.18);
+}
+#btnStart.liquid-bubble:active{ transform: scale(.98); }
+
+/* Wortmarke */
+#btnStart .wordmark{
+  user-select:none;
+  background: linear-gradient(135deg, #fff, #e5e7eb);
+  -webkit-background-clip:text; background-clip:text;
+  color:transparent;
+  letter-spacing:.6px;
+}
+/* --- Minimal-Preview Layout --- */
+#view-preview .info{ display:grid; gap:12px }
+#view-preview .kv{
+  display:grid; gap:4px;
+  padding:12px 14px; border:1px solid var(--stroke);
+  border-radius:12px;
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+}
+#view-preview .label{ font-size:13px; color:var(--muted) }
+#view-preview .value{ font-size:16px; font-weight:600 }
+
+/* Bottom-Bar mittig ausrichten, da nur 1 sichtbarer Button */
+#bar-actions{ justify-content:center }
+
+  </style>
+</head>
+<body>
+  <div class="shell glass-card sheen" id="app">
+   <header class="hidden">
+
+      <div class="brand">
+        <div class="logo" aria-hidden></div>
+        <div>
+          <h1>ParkCheck</h1>
+        </div>
+      </div>
+       <div class="tag" id="secureHint">🔒 Sicher</div>
+</header>
+
+    <main>
+<!-- START -->
+<section id="view-start" class="start-center">
+  <button id="btnStart" type="button" class="liquid-bubble" aria-label="ParkCheck starten">
+    <span class="wordmark">ParkCheck</span>
+  </button>
+
+  <!-- bleibt versteckt, wird von btnStart geklickt -->
+  <input id="fileInput" type="file" accept="image/*" capture="environment" />
+</section>
+
+
+
+      <!-- PREVIEW – minimal -->
+<section id="view-preview" class="panel hidden">
+  <!-- versteckt: Statuschips (für JS-Kompatibilität) -->
+  <div class="status hidden" style="margin-bottom:12px">
+    <div class="chip"><span class="dot" id="dotExif"></span> EXIF <span id="exifState" class="muted">—</span></div>
+    <div class="chip"><span class="dot" id="dotWhen"></span> Zeitpunkt <span id="whenState" class="muted">—</span></div>
+    <div class="chip"><span class="dot" id="dotWhere"></span> Position <span id="whereState" class="muted">—</span></div>
+  </div>
+
+  <!-- nur Bild -->
+  <div class="preview"><img id="imgPreview" alt="Aufgenommenes Foto"/></div>
+
+  <!-- nur Nummerschild & Adresse -->
+  <div class="panel info" style="margin-top:12px">
+    <div class="kv">
+      <div class="label">Nummerschild</div>
+      <div id="plateLive" class="value">– (warte auf OCR…)</div>
+    </div>
+    <div class="kv">
+      <div class="label">Adresse</div>
+      <div id="addrLive" class="value">– (warte auf Adresse…)</div>
+    </div>
+
+    <!-- versteckt: Debug/Links (für JS-Kompatibilität) -->
+    <div class="field hidden">
+      <label>Datensatz-ID</label>
+      <code id="rowId">–</code>
+    </div>
+    <div class="field hidden">
+      <label>Bild-Link</label>
+      <a id="imgLink" href="#" target="_blank">–</a>
+    </div>
+  </div>
+</section>
+
+
+      <!-- DONE -->
+      <section id="view-done" class="hero hidden">
+        <h2>✅ Erfolgreich gesendet</h2>
+        <p id="doneMsg" class="muted">Foto & Metadaten wurden in Supabase gespeichert.</p>
+        <div class="cta"><button class="btn" id="btnAgain">Neues Foto</button></div>
+      </section>
+    </main>
+
+    <div id="bar-actions" class="bottom-bar hidden">
+  <button class="btn btn-secondary" id="btnRetake">↩️ Neu aufnehmen</button>
+  <button class="btn hidden" id="btnSend">📤 Senden</button>
+</div>
+
+  </div>
+
+  <canvas id="canvas" class="hidden"></canvas>
+
+  <!-- App (ESM) -->
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    /** CONFIG **/
+    const SUPABASE_URL = "https://gmpbanieilqnqudiqcrm.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtcGJhbmllaWxxbnF1ZGlxY3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2MjI1ODcsImV4cCI6MjA3NjE5ODU4N30.m9B6MzyQOHi8q_EbWNvLVJAh34pjeGJSZWPoH232V_c";
+const SUPABASE_TABLE = "meldungen";      // bleibt
+const SUPABASE_BUCKET = "captures";      // bleibt
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    /** UI HELPERS **/
+    const byId = (id) => document.getElementById(id);
+    const show = (id) => byId(id).classList.remove('hidden');
+    const hide = (id) => byId(id).classList.add('hidden');
+    const setDot = (el, state) => { const colors = { idle:'#94a3b8', ok:'#22c55e', warn:'#f59e0b', err:'#ef4444' }; el.style.background = colors[state] || colors.idle; }
+
+    /** STATE **/
+    let capturedBlob = null; let capturedFile = null; let meta = { exifWhen:null, exifLat:null, exifLng:null };
+let lastRowId = null;
+let realtimeChannel = null;
+let platePollTimer = null;
+let gotPlate = false;
+let gotAddr = false;
+
+
+
+    /** EL **/
+    const secureHint = byId('secureHint');
+    const btnStart = byId('btnStart'); const btnRetake = byId('btnRetake'); const btnSend = byId('btnSend'); const btnAgain = byId('btnAgain');
+const fileInput = byId('fileInput');
+const imgPreview = byId('imgPreview'); const metaOut = byId('metaOut');
+const dotExif = byId('dotExif'); const dotWhen = byId('dotWhen'); const dotWhere = byId('dotWhere');
+
+/* NEU: Live-Ausgabe-Elemente holen */
+const rowIdEl = byId('rowId');
+const plateLiveEl = byId('plateLive');
+const imgLinkEl = byId('imgLink');
+const addrLiveEl = byId('addrLive');
+
+
+/* Senden-Button ausblenden, wir inserten automatisch */
+btnSend.classList.add('hidden');
+  
+
+    /** START-UP **/
+    const isSecure = window.isSecureContext || location.hostname === 'localhost';
+    secureHint.textContent = isSecure ? '🔒 Sicher' : '⚠️ HTTPS oder localhost verwenden';
+
+    function go(to){ ['view-start','view-preview','view-done'].forEach(id=>hide(id)); show(to); }
+
+    /** EXIF **/
+    function readExif(file){
+      return new Promise((resolve)=>{
+        try{
+          EXIF.getData(file, function(){
+            const lat = EXIF.getTag(this, 'GPSLatitude');
+            const lon = EXIF.getTag(this, 'GPSLongitude');
+            const latRef = EXIF.getTag(this, 'GPSLatitudeRef');
+            const lonRef = EXIF.getTag(this, 'GPSLongitudeRef');
+            const dto = EXIF.getTag(this, 'DateTimeOriginal');
+            function toFloat(v){ if (!v) return null; if (typeof v==='object' && v.numerator!==undefined) return v.numerator/v.denominator; return parseFloat(String(v).replace(',', '.')); }
+            function toDec(coord, ref){ if (!coord||!ref) return null; const d=toFloat(coord[0]), m=toFloat(coord[1]), s=toFloat(coord[2]); if([d,m,s].some(v=>v==null||Number.isNaN(v))) return null; let dec=d+m/60+s/3600; if(ref==='S'||ref==='W') dec=-dec; return dec; }
+            function toISO(s){ if(!s) return null; const [dp,tp]=s.split(' '); return dp.replace(/:/g,'-')+'T'+tp; }
+            resolve({ exifWhen: toISO(dto), exifLat: toDec(lat,latRef), exifLng: toDec(lon,lonRef) });
+          });
+        }catch{ resolve({ exifWhen:null, exifLat:null, exifLng:null }); }
+      });
+    }
+
+    /** PLATE PARSER **/
+    function parsePlate(input){
+      const raw = (input||'').trim().toUpperCase();
+      if (!raw) return { kanton:null, nummer:null, full:null };
+      let kanton=null, nummer=null;
+      if (raw.includes(';')){
+        const parts = raw.split(';').map(s=>s.trim()).filter(Boolean);
+        if (parts.length>=2){ kanton = parts[0]; nummer = parts[1]; }
+      }
+      if (!kanton || !nummer){
+        // akzeptiert: "ZH 123456", "AG-578501", "BE:1234", "FL12345"
+        const m = raw.replace(/\s+/g,' ').match(/^([A-ZÄÖÜ]{1,3})[^0-9]*([0-9]{1,6})$/);
+        if (m){ kanton = m[1]; nummer = m[2]; }
+      }
+      const full = (kanton && nummer) ? `${kanton};${nummer}` : raw;
+      return { kanton, nummer, full };
+    }
+
+    function renderPlate(){
+      const { kanton, nummer, full } = parsePlate(plateInput.value);
+      if (kanton && nummer) plateParseOut.textContent = `Erkannt: ${kanton};${nummer}`;
+      else plateParseOut.textContent = 'Bitte im Format "AG;578501" oder "AG 578501" eingeben';
+      return { kanton, nummer, full };
+    }
+
+    /** CAPTURE via native Camera **/
+    btnStart.addEventListener('click', () => fileInput.click());
+
+    // Datei-Upload (Kamera oder Galerie)
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files?.[0]; if (!file) return;
+  capturedFile = file; imgPreview.src = URL.createObjectURL(file); go('view-preview'); show('bar-actions');
+
+// EXIF lesen
+setDot(dotExif, 'idle'); byId('exifState').textContent = 'lese EXIF…';
+const ex = await readExif(file); meta = ex;
+
+// Zeitpunkt aus EXIF oder Dateizeit
+if (meta.exifWhen){
+  setDot(dotWhen,'ok'); byId('whenState').textContent = meta.exifWhen;
+} else {
+  setDot(dotWhen,'warn');
+  byId('whenState').textContent = new Date(file.lastModified || Date.now()).toISOString();
+}
+
+// GPS: erst EXIF, sonst Browser
+let used = 'exif';
+let lat = meta.exifLat, lon = meta.exifLng;
+if (lat == null || lon == null){
+  used = 'browser';
+  const pos = await getBrowserPosition();
+  if (pos){ lat = pos.lat; lon = pos.lon; }
+}
+
+// UI + State nach Quelle setzen
+if (lat != null && lon != null){
+  byId('whereState').textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)} (${used})`;
+  setDot(dotWhere,'ok'); setDot(dotExif, meta.exifLat!=null?'ok':'warn');
+  // Schreibe die finalen Koordinaten in meta, damit der Insert sie nutzt
+  meta.finalLat = lat; meta.finalLon = lon;
+} else {
+  byId('whereState').textContent = 'keine GPS-Daten gefunden';
+  setDot(dotWhere,'warn'); setDot(dotExif, meta.exifLat!=null?'ok':'warn');
+  meta.finalLat = null; meta.finalLon = null;
+}
+
+
+  // in komprimiertes JPEG konvertieren (kleinere Datei)
+  const img = new Image();
+  img.onload = async () => {
+    const canvas = byId('canvas');
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d'); ctx.drawImage(img,0,0);
+    capturedBlob = await new Promise(res => canvas.toBlob(b => res(b), 'image/jpeg', 0.9));
+    renderMeta();
+
+    // <<< NEU: sofort hochladen + Datensatz anlegen + Realtime lauschen
+    await insertNowAndWatch();
+  };
+  img.src = imgPreview.src;
+});
+
+
+function renderMeta(){
+  const target = metaOut || document.getElementById('metaOut'); // kann fehlen
+  if (!target) return; // Element entfernt → nichts rendern, kein Fehler
+
+  const lines = [];
+  if (meta.exifWhen) lines.push('Zeitpunkt (EXIF): ' + meta.exifWhen);
+  else lines.push('Zeitpunkt: aus Dateizeit');
+
+  if (meta.exifLat != null && meta.exifLng != null) {
+    lines.push(`Position (EXIF): ${meta.exifLat}, ${meta.exifLng}`);
+  } else {
+    lines.push('Position: keine EXIF-GPS-Daten gefunden');
+  }
+
+  if (capturedBlob) lines.push('Bildgröße: ' + Math.round(capturedBlob.size/1024) + ' KB');
+
+  target.textContent = lines.join('\n');
+}
+
+
+ 
+
+btnAgain.addEventListener('click', ()=>{
+  // Realtime & Polling beenden
+  if (platePollTimer){ clearInterval(platePollTimer); platePollTimer = null; }
+  if (realtimeChannel){ supabase.removeChannel(realtimeChannel); realtimeChannel = null; }
+
+  // Blob-URL freigeben & UI reset
+  try { if (imgPreview?.src?.startsWith('blob:')) URL.revokeObjectURL(imgPreview.src); } catch(e){}
+  imgPreview.src = '';
+
+  lastRowId = null;
+  capturedBlob = null;
+  capturedFile = null;
+  meta = { exifWhen:null, exifLat:null, exifLng:null };
+
+  if (rowIdEl) rowIdEl.textContent = '–';
+  if (addrLiveEl) addrLiveEl.textContent = '–';
+  plateLiveEl.textContent = '–';
+  imgLinkEl.textContent = '–';
+  imgLinkEl.removeAttribute('href');
+
+  hide('bar-actions');
+  go('view-start');
+});
+
+
+function applyUpdate({ plate, addr }){
+  if (plate && !gotPlate){
+    gotPlate = true;
+    plateLiveEl.textContent = plate;
+  }
+  if (addr && !gotAddr){
+    gotAddr = true;
+    addrLiveEl.textContent = addr;
+  }
+
+  // Nur wenn BEIDES da ist: aufräumen
+  if (gotPlate && gotAddr){
+    if (platePollTimer){ clearInterval(platePollTimer); platePollTimer = null; }
+    if (realtimeChannel){ supabase.removeChannel(realtimeChannel); realtimeChannel = null; }
+  }
+}
+
+
+async function refreshOnce(id){
+  const { data } = await supabase
+    .from(SUPABASE_TABLE)
+    .select('nummerschild, adresse_formatiert')
+    .eq('id', id)
+    .single();
+
+  applyUpdate({ plate: data?.nummerschild, addr: data?.adresse_formatiert });
+  return gotPlate && gotAddr;
+}
+
+async function getBrowserPosition(){
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      ()    => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    );
+  });
+}
+
+
+async function insertNowAndWatch() {
+  try {
+    // 1) Bild hochladen
+    let image_path = null, image_url = null;
+    if (capturedBlob || capturedFile) {
+      const file = capturedBlob || capturedFile;
+      const fileName = `capture_${Date.now()}.jpg`;
+      const up = await supabase.storage.from(SUPABASE_BUCKET).upload(fileName, file, {
+        contentType: 'image/jpeg', upsert: false
+      });
+      if (up.error) throw up.error;
+      image_path = up.data.path;
+
+      // Signed URL (10 Min) für Make & Vorschau
+      const signed = await supabase.storage.from(SUPABASE_BUCKET).createSignedUrl(image_path, 600);
+      if (!signed.data?.signedUrl) throw new Error("Signed URL fehlgeschlagen");
+      image_url = signed.data.signedUrl;
+      imgLinkEl.href = image_url;
+      imgLinkEl.textContent = "Bild öffnen";
+    }
+
+    // 2) Metadaten
+    const ts = meta.exifWhen ? new Date(meta.exifWhen) : new Date();
+const payload = {
+  timestamp: ts.toISOString(),
+  breitegrade: meta.finalLat ?? null,   // <-- statt meta.exifLat
+  laengegrade: meta.finalLon ?? null,   // <-- statt meta.exifLng
+  image_path,
+  image_url
+};
+
+
+    // 3) Insert
+    const ins = await supabase.from(SUPABASE_TABLE).insert(payload).select().single();
+    if (ins.error) throw ins.error;
+
+// 4) UI aktualisieren + Realtime auf diesen Datensatz
+const row = ins.data;
+lastRowId = row.id;
+rowIdEl.textContent = lastRowId;
+// Flags resetten & UI vorbereiten
+gotPlate = false;
+gotAddr  = false;
+plateLiveEl.textContent = "– (warte auf OCR)…";
+addrLiveEl.textContent  = "– (warte auf Adresse…)";
+
+// Realtime-Subscription ZUERST
+realtimeChannel = supabase
+  .channel("meldungen-" + lastRowId)
+  .on("postgres_changes",
+    { event: "UPDATE", schema: "public", table: SUPABASE_TABLE, filter: `id=eq.${lastRowId}` },
+    (payload) => {
+      applyUpdate({
+        plate: payload.new?.nummerschild,
+        addr:  payload.new?.adresse_formatiert
+      });
+    }
+  )
+  .subscribe(async (status) => {
+    if (status === 'SUBSCRIBED'){
+      // Sofort einmalig ziehen (falls OCR/Geo schon fertig ist)
+      await refreshOnce(lastRowId);
+
+      // Sicherheitsnetz: bis beides da ist, alle 2s nachfragen
+      if (!(gotPlate && gotAddr)){
+        platePollTimer = setInterval(()=>refreshOnce(lastRowId), 2000);
+      }
+    }
+  });
+
+// Danach erst Functions starten
+await supabase.functions.invoke('plate-ocr',  { body: { id: lastRowId, image_path } });
+await supabase.functions.invoke('reverse-geo', { body: { id: lastRowId } });
+
+// 4b) JETZT die Edge Function starten (kein Rennen mehr)
+try {
+  const { data: fnData, error: fnErr } = await supabase.functions.invoke('plate-ocr', {
+    body: { id: lastRowId, image_path }
+  });
+await supabase.functions.invoke('reverse-geo', { body: { id: lastRowId } });
+  if (fnErr) console.warn('plate-ocr error:', fnErr);
+  else if (fnData?.ok === false) console.warn('plate-ocr debug:', fnData);
+} catch (e) {
+  console.warn('plate-ocr call failed:', e);
+}
+
+
+
+    byId('bar-actions').classList.remove('hidden'); // Retake sichtbar lassen
+
+    
+  } catch (err) {
+    alert('Insert fehlgeschlagen: ' + (err.message || err));
+  }
+}
+
+ 
+      </script>
+</body>
+</html>
