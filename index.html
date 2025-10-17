@@ -289,6 +289,16 @@ btnSend.classList.add('hidden');
         }catch{ resolve({ exifWhen:null, exifLat:null, exifLng:null }); }
       });
     }
+/* --- Adresse formatieren: "Strasse Hausnr, PLZ Ort" --- */
+function formatAddress(obj = {}) {
+  const { strasse, hausnr, plz, ort, adresse_formatiert } = obj;
+  const left  = [strasse, hausnr].filter(Boolean).join(' ').trim();
+  const right = [plz, ort].filter(Boolean).join(' ').trim();
+  let out = [left, right].filter(Boolean).join(', ').trim();
+  // Fallback auf alte Spalte, falls vorhanden
+  if (!out && adresse_formatiert) out = adresse_formatiert;
+  return out || null; // null → "noch nichts da" (blockiert applyUpdate nicht)
+}
 
     /** PLATE PARSER **/
     function parsePlate(input){
@@ -441,13 +451,15 @@ function applyUpdate({ plate, addr }){
 async function refreshOnce(id){
   const { data } = await supabase
     .from(SUPABASE_TABLE)
-    .select('nummerschild, adresse_formatiert')
+    .select('nummerschild, strasse, hausnr, plz, ort, adresse_formatiert')
     .eq('id', id)
     .single();
 
-  applyUpdate({ plate: data?.nummerschild, addr: data?.adresse_formatiert });
+  const addr = formatAddress(data || {});
+  applyUpdate({ plate: data?.nummerschild, addr });
   return gotPlate && gotAddr;
 }
+
 
 async function getBrowserPosition(){
   return new Promise((resolve) => {
@@ -512,12 +524,12 @@ realtimeChannel = supabase
   .channel("meldungen-" + lastRowId)
   .on("postgres_changes",
     { event: "UPDATE", schema: "public", table: SUPABASE_TABLE, filter: `id=eq.${lastRowId}` },
-    (payload) => {
-      applyUpdate({
-        plate: payload.new?.nummerschild,
-        addr:  payload.new?.adresse_formatiert
-      });
-    }
+   (payload) => {
+  applyUpdate({
+    plate: payload.new?.nummerschild,
+    addr:  formatAddress(payload.new)
+  });
+}
   )
   .subscribe(async (status) => {
     if (status === 'SUBSCRIBED'){
